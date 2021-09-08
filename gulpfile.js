@@ -12,6 +12,8 @@ const browserSync = require('browser-sync').create();
 const babel = require('gulp-babel');
 const terser = require('gulp-terser'); // compresses es6+ code
 const del = require('del');
+const imagemin = require('gulp-imagemin');
+const webp = require('gulp-webp');
 
 
 
@@ -59,11 +61,45 @@ const scripts = () => {
     }))
     .pipe(terser())
     .pipe(rename('main.min.js'))
-    .pipe(dest('src'))
+    .pipe(dest('src/js'))
     .pipe(browserSync.stream());
 };
 
 exports.scripts = scripts;
+
+
+
+// Images 
+
+const images = () => {
+  return src('src/img/**/*.{png, jpg, jpeg, svg}')
+  .pipe(imagemin([
+    imagemin.gifsicle({interlaced: true}),
+    imagemin.mozjpeg({quality: 85, progressive: true}),
+    imagemin.optipng({optimizationLevel: 3}),
+    imagemin.svgo({
+      plugins: [
+        {removeViewBox: true},
+        {cleanupIDs: false}
+      ]
+    })
+  ]))
+  .pipe(dist('src/img'));
+};
+
+exports.images = images;
+
+
+
+// WebP 
+
+const createWepb = () => {
+  return src('src/img/**/*.{jpg, png, jpeg}')
+    .pipe(webp({quality: 90}))
+    .pipe(dest('src/img'));
+};
+
+exports.createWepb = createWepb;
 
 
 
@@ -73,7 +109,7 @@ const copy = () => {
   return src([
     'src/css/style.min.css',
     'src/fonts/*',
-    'src/img/*',
+     'src/img/*',
     'src/js/main.min.js'
   ],{
     base: 'src/'
@@ -121,3 +157,4 @@ const cleanDist = () => {
 exports.cleanDist = cleanDist;
 
 exports.test = parallel(styles, scripts, browsersync, watching);
+exports.build = series(cleanDist, scripts, styles, createWepb, copy, html);
